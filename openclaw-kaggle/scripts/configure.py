@@ -110,6 +110,11 @@ def configure_mcp(config: dict) -> None:
     security_home = Path(os.environ["OPENCLAW_SECURITY_HOME"])
     tools = Path(os.environ["OPENCLAW_SECURITY_TOOLS_DIR"])
     python = os.environ["OPENCLAW_MCP_PYTHON"]
+    aircrack_work = state / "aircrack"
+    hexstrike_work = state / "hexstrike/work"
+    strix_work = state / "strix/work"
+    for directory in (aircrack_work, hexstrike_work, strix_work):
+        directory.mkdir(parents=True, exist_ok=True)
     common_env = {
         "HOME": str(security_home),
         "PATH": f"{os.environ['OPENCLAW_TOOLS_DIR']}/bin:{os.environ.get('PATH', '')}",
@@ -122,6 +127,7 @@ def configure_mcp(config: dict) -> None:
             "aircrack": {
                 "command": python,
                 "args": [str(bundle / "mcp/aircrack/server.py")],
+                "cwd": str(aircrack_work),
                 "env": {
                     **common_env,
                     "AIRCRACK_CAPTURE_DIR": str(state / "aircrack/captures"),
@@ -143,6 +149,7 @@ def configure_mcp(config: dict) -> None:
                     "--timeout",
                     "900",
                 ],
+                "cwd": str(hexstrike_work),
                 "env": common_env,
                 "enabled": True,
                 "connectionTimeoutMs": 30_000,
@@ -153,6 +160,7 @@ def configure_mcp(config: dict) -> None:
             "strix": {
                 "command": python,
                 "args": [str(bundle / "mcp/strix/server.py")],
+                "cwd": str(strix_work),
                 "env": {
                     **common_env,
                     "STRIX_BIN": str(tools / "src/strix/.venv/bin/strix"),

@@ -4,7 +4,7 @@ set -o errexit -o nounset -o pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 MANIFEST="$OPENCLAW_BUNDLE_DIR/manifests/security-tools.json"
-LOCK_HASH="$(sha256sum "$MANIFEST" "$OPENCLAW_BUNDLE_DIR/manifests/security-runtime-requirements.txt" | sha256sum | cut -d' ' -f1)"
+LOCK_HASH="$(sha256sum "$MANIFEST" "$OPENCLAW_BUNDLE_DIR/manifests/security-runtime-lock.txt" | sha256sum | cut -d' ' -f1)"
 SECURITY_ROOT="$OPENCLAW_TOOLS_DIR/security"
 SOURCE_ROOT="$SECURITY_ROOT/src"
 VENV="$SECURITY_ROOT/mcp-venv"
@@ -14,7 +14,7 @@ mkdir -p "$SOURCE_ROOT" "$OPENCLAW_TOOLS_DIR/bin" "$OPENCLAW_SECURITY_STATE_DIR"
 download() {
   local url=$1 output=$2 checksum=$3
   if [[ ! -f "$output" ]] || ! printf '%s  %s\n' "$checksum" "$output" | sha256sum --check --status; then
-    curl --fail --location --retry 5 --retry-all-errors --connect-timeout 20 --output "$output.part" "$url"
+    curl --fail --silent --show-error --location --retry 5 --retry-all-errors --connect-timeout 20 --output "$output.part" "$url"
     printf '%s  %s\n' "$checksum" "$output.part" | sha256sum --check --status
     mv "$output.part" "$output"
   fi
@@ -42,7 +42,10 @@ if [[ ! -f "$MARKER" ]]; then
     echo 'wireshark-common wireshark-common/install-setuid boolean false' | debconf-set-selections 2>/dev/null || true
     candidates=(
       aircrack-ng nmap masscan sqlmap nikto dirb hydra john hashcat tshark tcpdump
-      whois dnsutils smbclient binutils file git curl unzip xz-utils python3-venv
+      arp-scan binwalk dnsenum enum4linux fierce medusa nbtscan patator radare2
+      responder scalpel smbmap testdisk theharvester wafw00f wfuzz wpscan
+      libimage-exiftool-perl python3-impacket whois dnsutils smbclient binutils
+      file git curl unzip xz-utils python3-venv
     )
     packages=()
     for package in "${candidates[@]}"; do
@@ -96,18 +99,18 @@ PY
   install -m 0755 "$uv_temp"/*/uvx "$OPENCLAW_TOOLS_DIR/bin/uvx"
   rm -rf "$uv_temp"
 
-  "$OPENCLAW_TOOLS_DIR/bin/uv" python install 3.12
+  "$OPENCLAW_TOOLS_DIR/bin/uv" python install 3.12.15
   rm -rf "$VENV"
-  "$OPENCLAW_TOOLS_DIR/bin/uv" venv --python 3.12 "$VENV"
+  "$OPENCLAW_TOOLS_DIR/bin/uv" venv --python 3.12.15 "$VENV"
   "$OPENCLAW_TOOLS_DIR/bin/uv" pip install --python "$VENV/bin/python" \
-    --requirement "$OPENCLAW_BUNDLE_DIR/manifests/security-runtime-requirements.txt"
+    --requirement "$OPENCLAW_BUNDLE_DIR/manifests/security-runtime-lock.txt"
 
   git init -q "$SOURCE_ROOT/strix"
   git -C "$SOURCE_ROOT/strix" remote add origin https://github.com/usestrix/strix.git
   git -C "$SOURCE_ROOT/strix" fetch -q --depth 1 origin a3c31236bd6305784a501a3102dab0bda83f2317
   git -C "$SOURCE_ROOT/strix" checkout -q --detach FETCH_HEAD
   [[ "$(git -C "$SOURCE_ROOT/strix" rev-parse HEAD)" == a3c31236bd6305784a501a3102dab0bda83f2317 ]]
-  (cd "$SOURCE_ROOT/strix" && "$OPENCLAW_TOOLS_DIR/bin/uv" sync --frozen --no-dev)
+  (cd "$SOURCE_ROOT/strix" && "$OPENCLAW_TOOLS_DIR/bin/uv" sync --frozen --no-dev --python 3.12.15)
 
   rm -f "$SECURITY_ROOT"/.installed-*
   touch "$MARKER"

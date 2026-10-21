@@ -404,18 +404,18 @@ def get_job(job_id: str) -> Job:
 # MCP server
 # ---------------------------------------------------------------------------
 
-server = _Server(
-    name=SERVER_NAME,
-    version=SERVER_VERSION,
-    instructions=(
-        "Strix is an autonomous multi-agent penetration-testing tool. Use "
-        "strix_start_scan for long scans (returns immediately with a job id) and "
-        "strix_job_status / strix_job_log to watch progress. Use strix_scan when "
-        "you want to wait for a bounded result. Reports land under "
-        "<cwd>/strix_runs/<run_name>/penetration_test_report.md; read them with "
-        "strix_run_report."
-    ),
+_INSTRUCTIONS = (
+    "Strix is an autonomous multi-agent penetration-testing tool. Use "
+    "strix_start_scan for long scans (returns immediately with a job id) and "
+    "strix_job_status / strix_job_log to watch progress. Use strix_scan when "
+    "you want to wait for a bounded result. Reports land under "
+    "<cwd>/strix_runs/<run_name>/penetration_test_report.md; read them with "
+    "strix_run_report."
 )
+if _MCP_API == 2:
+    server = _Server(name=SERVER_NAME, version=SERVER_VERSION, instructions=_INSTRUCTIONS)
+else:
+    server = _Server(name=SERVER_NAME, instructions=_INSTRUCTIONS)
 
 try:
     server.description = "Run and monitor Strix penetration tests over MCP."

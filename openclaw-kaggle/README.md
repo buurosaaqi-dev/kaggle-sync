@@ -20,7 +20,13 @@ At startup, `backups/openclaw-state.enc` is authenticated, decrypted, and restor
 
 To preserve GPU quota, the kernel saves state and exits after 30 minutes without an established Control UI connection. A 10-hour hard limit leaves time for the final backup before Kaggle's session ceiling. Override these with `OPENCLAW_IDLE_MINUTES` and `OPENCLAW_MAX_RUNTIME_HOURS` when launching the notebook.
 
-The archive includes both `state/` and `home/`; model weights, Node binaries, package caches, and operational logs remain outside it and are recreated after a Kaggle reset.
+The archive includes both `state/` and `home/`; model weights, Node binaries, package caches, and operational logs remain outside it and are recreated after a Kaggle reset. Security scan jobs, reports, Aircrack captures, runtime inventories, and repositories live below `state/security/` and `state/repositories/`, so they are encrypted with the rest of the OpenClaw state.
+
+## Native MCP security runtime
+
+Startup verifies checksums for pinned portable binaries, checks out HexStrike and Strix by immutable Git revision, creates an exact Python 3.12.15 environment from `manifests/security-runtime-lock.txt`, and registers Aircrack, HexStrike, and Strix under native OpenClaw `mcp.servers`. `openclaw mcp doctor --probe` and `openclaw mcp probe` must both pass before the GPU model starts. Their reports are retained under `state/security/`.
+
+The public repository contains adapters, manifests, checksums, and installers only. Captures, scan output, API credentials, OpenClaw credentials, and restored state remain in the encrypted archive.
 
 ## Versions
 
@@ -28,3 +34,10 @@ The archive includes both `state/` and `home/`; model weights, Node binaries, pa
 - Node.js: `24.16.0`
 - cloudflared: `2026.10.3`
 - Model: `WhiteRabbitNeo/WhiteRabbitNeo-13B-v1`
+- MCP Python: `3.12.15`
+- MCP SDK: `1.27.0`
+- HexStrike: `6.0.0` at `d689933ff579d839c676c82b231f8e98326c5f04`
+- Strix: `1.7.0` at `a3c31236bd6305784a501a3102dab0bda83f2317`
+- Aircrack-ng reference: `1:1.7+git20230807.4bf83f1a-3`
+
+The complete binary, Python, and Kali reference pins are in `manifests/security-tools.json`.
