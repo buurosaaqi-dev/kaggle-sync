@@ -1,0 +1,19 @@
+{
+  "id": "updyrahmaanomer/hb-test",
+  "id_no": 140079727,
+  "title": "hb-test",
+  "code_file": "hb-test.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "keywords": [],
+  "dataset_sources": [],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": [],
+  "docker_image": "gcr.io/kaggle-private-byod/python@sha256:2757e0c7d1e0a9cb43da657b97e223c321a98f5014bdf64f44f2f6b083ad2b2f",
+  "machine_shape": "NvidiaTeslaT4"
+}
