@@ -21,7 +21,7 @@
     "aiohttp": "3.13.1",
     "beautifulsoup4": "4.14.2",
     "selenium": "4.36.0",
-    "mitmproxy": "11.0.2",
+    "mitmproxy": "12.2.3",
     "uv": "0.13.4"
   },
   "portableBinaries": {

@@ -87,10 +87,6 @@ if needle not in source:
 path.write_text(source.replace(needle, 'app.run(host=API_HOST, port=API_PORT, debug=DEBUG_MODE)'), encoding="utf-8")
 PY
 
-  python -m venv "$VENV"
-  "$VENV/bin/python" -m pip install --quiet --upgrade pip==25.2
-  "$VENV/bin/python" -m pip install --quiet --requirement "$OPENCLAW_BUNDLE_DIR/manifests/security-runtime-requirements.txt"
-
   uv_archive="$SECURITY_ROOT/uv-x86_64-unknown-linux-gnu.tar.gz"
   download https://github.com/astral-sh/uv/releases/download/0.13.4/uv-x86_64-unknown-linux-gnu.tar.gz \
     "$uv_archive" 2b428396f12572d4429cf210ca234dd599a33b3af0958a4d5ed569d63e3f344f
@@ -99,6 +95,12 @@ PY
   install -m 0755 "$uv_temp"/*/uv "$OPENCLAW_TOOLS_DIR/bin/uv"
   install -m 0755 "$uv_temp"/*/uvx "$OPENCLAW_TOOLS_DIR/bin/uvx"
   rm -rf "$uv_temp"
+
+  "$OPENCLAW_TOOLS_DIR/bin/uv" python install 3.12
+  rm -rf "$VENV"
+  "$OPENCLAW_TOOLS_DIR/bin/uv" venv --python 3.12 "$VENV"
+  "$OPENCLAW_TOOLS_DIR/bin/uv" pip install --python "$VENV/bin/python" \
+    --requirement "$OPENCLAW_BUNDLE_DIR/manifests/security-runtime-requirements.txt"
 
   git init -q "$SOURCE_ROOT/strix"
   git -C "$SOURCE_ROOT/strix" remote add origin https://github.com/usestrix/strix.git

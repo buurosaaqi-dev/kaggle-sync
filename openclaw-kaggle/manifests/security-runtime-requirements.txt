@@ -2,7 +2,7 @@ aiohttp==3.13.1
 beautifulsoup4==4.14.2
 flask==3.1.2
 mcp==1.27.0
-mitmproxy==11.0.2
+mitmproxy==12.2.3
 psutil==7.1.0
 requests==2.32.5
 selenium==4.36.0

@@ -128,3 +128,38 @@ Source code and metadata downloaded to /home/kali/kaggle-sync/notebook9856d7c4e0
 [*] Processing kernel: updyrahmaanomer/linux -> ./linux
 Source code and metadata downloaded to /home/kali/kaggle-sync/linux
 [*] Staging changes in Git...
+[main adc4c21] Auto-sync from Kaggle: 2026-10-21 16:00:20 UTC
+ 16 files changed, 1551 insertions(+), 4 deletions(-)
+ create mode 100644 openclaw-kaggle-persistent/kernel-metadata.json
+ create mode 100644 openclaw-kaggle-persistent/openclaw-kaggle-persistent.ipynb
+ create mode 100644 openclaw-kaggle/manifests/security-runtime-requirements.txt
+ create mode 100644 openclaw-kaggle/manifests/security-tools.json
+ create mode 100755 openclaw-kaggle/mcp/aircrack/server.py
+ create mode 100644 openclaw-kaggle/mcp/strix/README.md
+ create mode 100644 openclaw-kaggle/mcp/strix/pyproject.toml
+ create mode 100755 openclaw-kaggle/mcp/strix/server.py
+ create mode 100755 openclaw-kaggle/scripts/install_security_tools.sh
+ create mode 100755 openclaw-kaggle/scripts/probe_mcp.sh
+ create mode 100755 openclaw-kaggle/scripts/security_inventory.py
+[*] Pushing updates to https://github.com/buurosaaqi-dev/kaggle-sync.git...
+To https://github.com/buurosaaqi-dev/kaggle-sync.git
+   a5f4beb..adc4c21  main -> main
+[+] GitHub repository successfully updated!
+==========================================
+ Sync Complete.
+==========================================
+==========================================
+ Kaggle <-> GitHub Synchronization Engine
+==========================================
+[*] Fetching kernel list for authenticated user...
+[*] Processing kernel: updyrahmaanomer/openclaw-kaggle-persistent -> ./openclaw-kaggle-persistent
+Source code and metadata downloaded to /home/kali/kaggle-sync/openclaw-kaggle-persistent
+[*] Processing kernel: updyrahmaanomer/notebook5a48a9d069 -> ./notebook5a48a9d069
+Source code and metadata downloaded to /home/kali/kaggle-sync/notebook5a48a9d069
+[*] Processing kernel: updyrahmaanomer/notebookbc449ca6ea -> ./notebookbc449ca6ea
+Source code and metadata downloaded to /home/kali/kaggle-sync/notebookbc449ca6ea
+[*] Processing kernel: updyrahmaanomer/notebook9856d7c4e0 -> ./notebook9856d7c4e0
+Source code and metadata downloaded to /home/kali/kaggle-sync/notebook9856d7c4e0
+[*] Processing kernel: updyrahmaanomer/linux -> ./linux
+Source code and metadata downloaded to /home/kali/kaggle-sync/linux
+[*] Staging changes in Git...
