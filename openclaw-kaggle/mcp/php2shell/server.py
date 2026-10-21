@@ -110,14 +110,15 @@ RUNS_DIR.mkdir(parents=True, exist_ok=True)
 VERSION_RE = re.compile(r"(\d+)\.(\d+)(?:\.(\d+))?")
 PATH_RE = re.compile(r"^/[A-Za-z0-9._~!$&'()*+,;=:@%/-]{0,255}$")
 SID_RE = re.compile(r"^[A-Za-z0-9]{1,128}$")
-HOST_RE = re.compile(r"^[A-Za-z0-9._:-]{1,253}$")
 BLOCKED_NETWORKS = [
     ipaddress.ip_network("169.254.0.0/16"),
+    ipaddress.ip_network("100.100.100.200/32"),
     ipaddress.ip_network("fe80::/10"),
     ipaddress.ip_network("fec0::/10"),
     ipaddress.ip_network("ff00::/8"),
     ipaddress.ip_network("224.0.0.0/4"),
     ipaddress.ip_network("0.0.0.0/8"),
+    ipaddress.ip_network("240.0.0.0/4"),
 ]
 app = Server("php2shell-server")
 
@@ -142,6 +143,18 @@ def parse_version(value: str) -> tuple[int, int, int] | None:
     return int(major), int(minor), int(patch or 0)
 
 
+def parse_php_header(value: str, allow_bare: bool) -> tuple[int, int, int] | None:
+    """Extract a PHP version without misreading Apache/nginx version numbers."""
+    match = re.search(r"PHP[/ ]?(\d+\.\d+(?:\.\d+)?)", value or "", re.IGNORECASE)
+    if match:
+        return parse_version(match.group(1))
+    if allow_bare:
+        stripped = (value or "").strip()
+        if re.fullmatch(r"\d+\.\d+(?:\.\d+)?", stripped):
+            return parse_version(stripped)
+    return None
+
+
 def version_string(version: tuple[int, int, int]) -> str:
     return ".".join(str(part) for part in version)
 
@@ -152,6 +165,9 @@ def assess_version(version: tuple[int, int, int]) -> dict:
     if version < MIN_AFFECTED:
         status = "not_affected"
         detail = f"Released before session.upload_progress existed ({AFFECTED_RANGE})."
+    elif major > 8 or (major == 8 and minor > 5):
+        status = "unknown"
+        detail = "This branch postdates the advisory data; confirm against the current PHP release notes."
     elif fixed is None:
         status = "vulnerable_eol"
         detail = "Branch predates the maintained fix releases; no patched build exists for it."
@@ -233,15 +249,6 @@ def validate_loopback_target(raw: str) -> tuple[str, str, int]:
     return normalized, host, port
 
 
-def require_loopback_host(host: str) -> str:
-    if not HOST_RE.fullmatch(host):
-        raise ValueError("host is not a valid hostname or IP address")
-    addresses = resolve_host(host)
-    if not addresses or any(not address.is_loopback for address in addresses):
-        raise ValueError(f"active verification is loopback-only; {host!r} resolved to {[str(a) for a in addresses]}")
-    return host
-
-
 def fetch_headers(url: str, timeout: float, max_redirects: int = 3, verify_tls: bool = True) -> dict:
     current = url
     hops: list[dict] = []
@@ -249,30 +256,36 @@ def fetch_headers(url: str, timeout: float, max_redirects: int = 3, verify_tls: 
     for _ in range(max_redirects + 1):
         normalized, host, port = validate_passive_url(current)
         parts = urlsplit(normalized)
-        connection_cls = http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
-        kwargs = {"timeout": timeout}
-        if parts.scheme == "https":
-            kwargs["context"] = context
-        connection = connection_cls(host, port, **kwargs)
-        try:
-            connection.request(
-                "HEAD",
-                parts.path or "/",
-                headers={"User-Agent": "php2shell-mcp/passive", "Accept": "*/*", "Connection": "close"},
-            )
-            response = connection.getresponse()
-            headers: dict[str, list[str]] = {}
-            for key, value in response.getheaders():
-                headers.setdefault(key.lower(), []).append(value)
-            status = response.status
-            location = response.getheader("Location")
-            if status in (301, 302, 303, 307, 308) and location:
-                hops.append({"url": normalized, "status": status, "location": location})
-                current = urljoin(normalized, location)
+        status = 0
+        location = None
+        headers: dict[str, list[str]] = {}
+        for method in ("HEAD", "GET"):
+            connection_cls = http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
+            kwargs = {"timeout": timeout}
+            if parts.scheme == "https":
+                kwargs["context"] = context
+            connection = connection_cls(host, port, **kwargs)
+            try:
+                request_headers = {"User-Agent": "php2shell-mcp/passive", "Accept": "*/*", "Connection": "close"}
+                if method == "GET":
+                    request_headers["Range"] = "bytes=0-0"
+                connection.request(method, parts.path or "/", headers=request_headers)
+                response = connection.getresponse()
+                headers = {}
+                for key, value in response.getheaders():
+                    headers.setdefault(key.lower(), []).append(value)
+                status = response.status
+                location = response.getheader("Location")
+            finally:
+                connection.close()
+            if method == "HEAD" and status in (405, 501):
                 continue
-            return {"url": normalized, "status": status, "headers": headers, "redirects": hops}
-        finally:
-            connection.close()
+            break
+        if status in (301, 302, 303, 307, 308) and location:
+            hops.append({"url": normalized, "status": status, "location": location})
+            current = urljoin(normalized, location)
+            continue
+        return {"url": normalized, "status": status, "headers": headers, "redirects": hops}
     raise ValueError(f"more than {max_redirects} redirects")
 
 
@@ -289,7 +302,7 @@ def detect_from_headers(headers: dict[str, list[str]]) -> dict:
     version = None
     source = None
     for label, candidate in (("x-powered-by", powered), ("server", server)):
-        parsed = parse_version(candidate)
+        parsed = parse_php_header(candidate, allow_bare=label == "x-powered-by")
         if parsed:
             version = parsed
             source = label
@@ -384,8 +397,8 @@ def interpret(chain: str, result: dict) -> list[str]:
     if "Failed to decode session object" in output:
         indicators.append("session handler mismatch decoded attacker data")
     if chain == "oom":
-        if "500" in output:
-            indicators.append("HTTP 500 after OOM payload")
+        if re.search(r"Response:\s+HTTP/\d\.\d\s+5\d\d", output):
+            indicators.append("HTTP 5xx after OOM payload")
         if "crashed" in output.lower() or "No response" in output:
             indicators.append("connection dropped; worker may have crashed")
     if result["returncode"] == 0 and not indicators:
