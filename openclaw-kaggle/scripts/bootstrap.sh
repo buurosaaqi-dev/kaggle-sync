@@ -61,6 +61,8 @@ if [[ "${OPENCLAW_SKIP_MODEL_DEPS:-0}" != 1 ]]; then
     'cryptography>=44,<47'
 fi
 
+"$OPENCLAW_BUNDLE_DIR/scripts/install_security_tools.sh"
+
 node --version
 openclaw --version
 cloudflared --version

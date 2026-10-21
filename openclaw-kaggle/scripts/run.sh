@@ -6,6 +6,7 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 MODEL_PID=""
 GATEWAY_PID=""
 TUNNEL_PID=""
+HEXSTRIKE_PID=""
 BACKUP_LOOP_PID=""
 IDLE_WATCH_PID=""
 
@@ -23,6 +24,7 @@ cleanup() {
   [[ -n "$TUNNEL_PID" ]] && kill "$TUNNEL_PID" 2>/dev/null || true
   [[ -n "$GATEWAY_PID" ]] && kill "$GATEWAY_PID" 2>/dev/null || true
   [[ -n "$MODEL_PID" ]] && kill "$MODEL_PID" 2>/dev/null || true
+  [[ -n "$HEXSTRIKE_PID" ]] && kill "$HEXSTRIKE_PID" 2>/dev/null || true
   wait 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
@@ -30,6 +32,7 @@ trap cleanup EXIT INT TERM
 "$OPENCLAW_BUNDLE_DIR/scripts/bootstrap.sh"
 "$OPENCLAW_BUNDLE_DIR/scripts/restore.sh"
 python "$OPENCLAW_BUNDLE_DIR/scripts/configure.py"
+python "$OPENCLAW_BUNDLE_DIR/scripts/security_inventory.py"
 
 OPENCLAW_GATEWAY_TOKEN="$(python - "$OPENCLAW_STATE_DIR/.env" <<'PY'
 import json
@@ -45,6 +48,32 @@ else:
 PY
 )"
 export OPENCLAW_GATEWAY_TOKEN
+
+hexstrike_work="$OPENCLAW_SECURITY_STATE_DIR/hexstrike/work"
+mkdir -p "$hexstrike_work"
+(
+  cd "$hexstrike_work"
+  exec env \
+    HOME="$OPENCLAW_SECURITY_HOME" \
+    HEXSTRIKE_HOST=127.0.0.1 \
+    HEXSTRIKE_PORT="$OPENCLAW_HEXSTRIKE_PORT" \
+    "$OPENCLAW_MCP_PYTHON" \
+    "$OPENCLAW_SECURITY_TOOLS_DIR/src/hexstrike/hexstrike_server.py" \
+    --port "$OPENCLAW_HEXSTRIKE_PORT"
+) >"$OPENCLAW_LOG_DIR/hexstrike.log" 2>&1 &
+HEXSTRIKE_PID=$!
+for _ in $(seq 1 90); do
+  if curl --fail --silent "http://127.0.0.1:$OPENCLAW_HEXSTRIKE_PORT/health" >/dev/null; then
+    break
+  fi
+  if ! kill -0 "$HEXSTRIKE_PID" 2>/dev/null; then
+    tail -n 100 "$OPENCLAW_LOG_DIR/hexstrike.log" >&2
+    exit 1
+  fi
+  sleep 2
+done
+curl --fail --silent "http://127.0.0.1:$OPENCLAW_HEXSTRIKE_PORT/health" >/dev/null
+"$OPENCLAW_BUNDLE_DIR/scripts/probe_mcp.sh"
 
 python "$OPENCLAW_BUNDLE_DIR/scripts/serve_whiterabbit.py" >"$OPENCLAW_LOG_DIR/model.log" 2>&1 &
 MODEL_PID=$!
