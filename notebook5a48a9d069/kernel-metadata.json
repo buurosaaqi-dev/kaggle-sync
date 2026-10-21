@@ -1,0 +1,19 @@
+{
+  "id": "updyrahmaanomer/notebook5a48a9d069",
+  "id_no": 140026115,
+  "title": "notebook5a48a9d069",
+  "code_file": "notebook5a48a9d069.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "keywords": [],
+  "dataset_sources": [],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": [],
+  "docker_image": "",
+  "machine_shape": "None"
+}
