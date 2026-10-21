@@ -323,3 +323,13 @@ To https://github.com/buurosaaqi-dev/kaggle-sync.git
 [*] Processing kernel: updyrahmaanomer/hb-test -> ./hb-test
 Source code and metadata downloaded to /home/kali/kaggle-sync/hb-test
 [*] Processing kernel: updyrahmaanomer/openclaw-kaggle-persistent -> ./openclaw-kaggle-persistent
+Source code and metadata downloaded to /home/kali/kaggle-sync/openclaw-kaggle-persistent
+[*] Processing kernel: updyrahmaanomer/notebook5a48a9d069 -> ./notebook5a48a9d069
+Source code and metadata downloaded to /home/kali/kaggle-sync/notebook5a48a9d069
+[*] Processing kernel: updyrahmaanomer/notebookbc449ca6ea -> ./notebookbc449ca6ea
+Source code and metadata downloaded to /home/kali/kaggle-sync/notebookbc449ca6ea
+[*] Processing kernel: updyrahmaanomer/notebook9856d7c4e0 -> ./notebook9856d7c4e0
+Source code and metadata downloaded to /home/kali/kaggle-sync/notebook9856d7c4e0
+[*] Processing kernel: updyrahmaanomer/linux -> ./linux
+Source code and metadata downloaded to /home/kali/kaggle-sync/linux
+[*] Staging changes in Git...
