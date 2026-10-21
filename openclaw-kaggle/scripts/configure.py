@@ -110,6 +110,7 @@ def configure_mcp(config: dict) -> None:
     security_home = Path(os.environ["OPENCLAW_SECURITY_HOME"])
     tools = Path(os.environ["OPENCLAW_SECURITY_TOOLS_DIR"])
     python = os.environ["OPENCLAW_MCP_PYTHON"]
+    enabled = os.environ.get("OPENCLAW_DEFER_MCP", "0") != "1"
     aircrack_work = state / "aircrack"
     hexstrike_work = state / "hexstrike/work"
     strix_work = state / "strix/work"
@@ -135,7 +136,7 @@ def configure_mcp(config: dict) -> None:
                     "AIRCRACK_WIFI_IFACE": os.environ.get("AIRCRACK_WIFI_IFACE", "wlan0"),
                     "AIRCRACK_MON_IFACE": os.environ.get("AIRCRACK_MON_IFACE", "wlan0mon"),
                 },
-                "enabled": True,
+                "enabled": enabled,
                 "connectionTimeoutMs": 15_000,
                 "requestTimeoutMs": 900_000,
                 "supportsParallelToolCalls": False,
@@ -152,7 +153,7 @@ def configure_mcp(config: dict) -> None:
                 ],
                 "cwd": str(hexstrike_work),
                 "env": common_env,
-                "enabled": True,
+                "enabled": enabled,
                 "connectionTimeoutMs": 30_000,
                 "requestTimeoutMs": 900_000,
                 "supportsParallelToolCalls": True,
@@ -168,7 +169,7 @@ def configure_mcp(config: dict) -> None:
                     "STRIX_MCP_DATA": str(state / "strix"),
                     "STRIX_MCP_WORK": str(state / "strix/work"),
                 },
-                "enabled": True,
+                "enabled": enabled,
                 "connectionTimeoutMs": 30_000,
                 "requestTimeoutMs": 900_000,
                 "supportsParallelToolCalls": False,
@@ -183,7 +184,7 @@ def configure_mcp(config: dict) -> None:
                     "PHP2SHELL_REPO": str(tools / "src/php2shell-poc"),
                     "PHP2SHELL_STATE_DIR": str(state / "php2shell"),
                 },
-                "enabled": True,
+                "enabled": enabled,
                 "connectionTimeoutMs": 20_000,
                 "requestTimeoutMs": 900_000,
                 "supportsParallelToolCalls": False,

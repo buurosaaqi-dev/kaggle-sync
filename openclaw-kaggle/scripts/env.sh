@@ -33,6 +33,16 @@ export OPENCLAW_HEXSTRIKE_PORT="${OPENCLAW_HEXSTRIKE_PORT:-8888}"
 export OPENCLAW_MODEL_ID="${OPENCLAW_MODEL_ID:-WhiteRabbitNeo/WhiteRabbitNeo-13B-v1}"
 export OPENCLAW_MODEL_ALIAS="${OPENCLAW_MODEL_ALIAS:-WhiteRabbitNeo-13B}"
 
+# Kaggle workers are short-lived. Installing the full Kali/Ubuntu security
+# package catalog before the gateway starts can consume the whole startup
+# window. Portable binaries and native MCP servers are always installed; set
+# this to 0 explicitly when a session needs the additional APT catalog.
+if [[ -d /kaggle/working ]]; then
+  export OPENCLAW_SKIP_SECURITY_APT="${OPENCLAW_SKIP_SECURITY_APT:-1}"
+else
+  export OPENCLAW_SKIP_SECURITY_APT="${OPENCLAW_SKIP_SECURITY_APT:-0}"
+fi
+
 export HF_HOME="${HF_HOME:-$OPENCLAW_WORK_ROOT/huggingface}"
 export HUGGINGFACE_HUB_CACHE="${HUGGINGFACE_HUB_CACHE:-$HF_HOME/hub}"
 export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-$HF_HOME/transformers}"

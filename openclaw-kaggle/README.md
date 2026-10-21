@@ -18,13 +18,13 @@ The notebook prints `OPENCLAW_URL` and `OPENCLAW_GATEWAY_TOKEN` after the model,
 
 At startup, `backups/openclaw-state.enc` is authenticated, decrypted, and restored into `/kaggle/working/openclaw-runtime`. While running, an online SQLite-safe snapshot is encrypted with AES-256-GCM using a 600,000-round PBKDF2-HMAC-SHA256 key and pushed every 15 minutes. A final backup is attempted when the kernel receives a normal stop signal.
 
-To preserve GPU quota, the kernel saves state and exits after 30 minutes without an established Control UI connection. A 10-hour hard limit leaves time for the final backup before Kaggle's session ceiling. Override these with `OPENCLAW_IDLE_MINUTES` and `OPENCLAW_MAX_RUNTIME_HOURS` when launching the notebook.
+The kernel stays active without a Control UI connection by default and has a 10-hour hard limit so the final encrypted backup completes before Kaggle's session ceiling. Set `OPENCLAW_IDLE_MINUTES` to a positive number to enable idle shutdown, and override `OPENCLAW_MAX_RUNTIME_HOURS` when needed.
 
 The archive includes both `state/` and `home/`; model weights, Node binaries, package caches, and operational logs remain outside it and are recreated after a Kaggle reset. Security scan jobs, reports, Aircrack captures, runtime inventories, and repositories live below `state/security/` and `state/repositories/`, so they are encrypted with the rest of the OpenClaw state.
 
 ## Native MCP security runtime
 
-Startup verifies checksums for pinned portable binaries, checks out HexStrike, Strix, and PHP2Shell by immutable Git revision, creates an exact Python 3.12.15 environment from `manifests/security-runtime-lock.txt`, and registers Aircrack, HexStrike, Strix, and PHP2Shell under native OpenClaw `mcp.servers`. `openclaw mcp doctor --probe` and `openclaw mcp probe` must both pass before the GPU model starts. Their reports are retained under `state/security/`.
+Startup brings up the OpenClaw gateway and Cloudflare URL first while model weights initialize. It then verifies checksums for pinned portable binaries, checks out HexStrike, Strix, and PHP2Shell by immutable Git revision, creates an exact Python 3.12.15 environment from `manifests/security-runtime-lock.txt`, and registers Aircrack, HexStrike, Strix, and PHP2Shell under native OpenClaw `mcp.servers`. `openclaw mcp doctor --probe` and `openclaw mcp probe` complete after the public URL is available, and their reports are retained under `state/security/`. Kaggle skips the large distribution APT catalog by default so the gateway can start reliably; set `OPENCLAW_SKIP_SECURITY_APT=0` for a session that needs those additional packages.
 
 PHP2Shell exposes passive advisory, version, header, repository, and lab checks against any target. Its five upstream verification chains run only when every resolved address is loopback; reports persist under `state/security/php2shell/runs/`. The privileged Docker lab from the upstream repository is not assumed inside Kaggle — `php2shell_lab_status` reports whether Docker, Compose, and the loopback listeners at 18080/18081 are actually present.
 

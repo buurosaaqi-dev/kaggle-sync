@@ -4,7 +4,10 @@ set -o errexit -o nounset -o pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 MANIFEST="$OPENCLAW_BUNDLE_DIR/manifests/security-tools.json"
-LOCK_HASH="$(sha256sum "$MANIFEST" "$OPENCLAW_BUNDLE_DIR/manifests/security-runtime-lock.txt" | sha256sum | cut -d' ' -f1)"
+LOCK_HASH="$(
+  { sha256sum "$MANIFEST" "$OPENCLAW_BUNDLE_DIR/manifests/security-runtime-lock.txt"; printf 'skip-apt=%s\n' "${OPENCLAW_SKIP_SECURITY_APT:-0}"; } \
+    | sha256sum | cut -d' ' -f1
+)"
 SECURITY_ROOT="$OPENCLAW_TOOLS_DIR/security"
 SOURCE_ROOT="$SECURITY_ROOT/src"
 VENV="$SECURITY_ROOT/mcp-venv"
@@ -36,6 +39,16 @@ install_archive_binary() {
 }
 
 if [[ ! -f "$MARKER" ]]; then
+  prerequisites=(curl git tar unzip xz sha256sum)
+  missing=()
+  for command in "${prerequisites[@]}"; do
+    command -v "$command" >/dev/null || missing+=("$command")
+  done
+  if ((${#missing[@]})); then
+    echo "missing bootstrap commands: ${missing[*]}" >&2
+    exit 1
+  fi
+
   if [[ "${OPENCLAW_SKIP_SECURITY_APT:-0}" != 1 ]] && command -v apt-get >/dev/null; then
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -qq
@@ -54,6 +67,8 @@ if [[ ! -f "$MARKER" ]]; then
     apt-get install -y --no-install-recommends "${packages[@]}"
     apt-get clean
     rm -rf /var/lib/apt/lists/*
+  else
+    echo "Skipping the full APT security catalog; portable tools and MCP servers remain enabled."
   fi
 
   install_archive_binary ffuf \

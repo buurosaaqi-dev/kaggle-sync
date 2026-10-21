@@ -31,8 +31,7 @@ trap cleanup EXIT INT TERM
 
 "$OPENCLAW_BUNDLE_DIR/scripts/bootstrap.sh"
 "$OPENCLAW_BUNDLE_DIR/scripts/restore.sh"
-python "$OPENCLAW_BUNDLE_DIR/scripts/configure.py"
-python "$OPENCLAW_BUNDLE_DIR/scripts/security_inventory.py"
+OPENCLAW_DEFER_MCP=1 python "$OPENCLAW_BUNDLE_DIR/scripts/configure.py"
 
 OPENCLAW_GATEWAY_TOKEN="$(python - "$OPENCLAW_STATE_DIR/.env" <<'PY'
 import json
@@ -49,45 +48,10 @@ PY
 )"
 export OPENCLAW_GATEWAY_TOKEN
 
-hexstrike_work="$OPENCLAW_SECURITY_STATE_DIR/hexstrike/work"
-mkdir -p "$hexstrike_work"
-(
-  cd "$hexstrike_work"
-  exec env \
-    HOME="$OPENCLAW_SECURITY_HOME" \
-    HEXSTRIKE_HOST=127.0.0.1 \
-    HEXSTRIKE_PORT="$OPENCLAW_HEXSTRIKE_PORT" \
-    "$OPENCLAW_MCP_PYTHON" \
-    "$OPENCLAW_SECURITY_TOOLS_DIR/src/hexstrike/hexstrike_server.py" \
-    --port "$OPENCLAW_HEXSTRIKE_PORT"
-) >"$OPENCLAW_LOG_DIR/hexstrike.log" 2>&1 &
-HEXSTRIKE_PID=$!
-for _ in $(seq 1 90); do
-  if curl --fail --silent "http://127.0.0.1:$OPENCLAW_HEXSTRIKE_PORT/health" >/dev/null; then
-    break
-  fi
-  if ! kill -0 "$HEXSTRIKE_PID" 2>/dev/null; then
-    tail -n 100 "$OPENCLAW_LOG_DIR/hexstrike.log" >&2
-    exit 1
-  fi
-  sleep 2
-done
-curl --fail --silent "http://127.0.0.1:$OPENCLAW_HEXSTRIKE_PORT/health" >/dev/null
-"$OPENCLAW_BUNDLE_DIR/scripts/probe_mcp.sh"
-
+# Start model loading without holding the public gateway behind it. The UI and
+# tunnel become reachable while model weights initialize on the GPU.
 python "$OPENCLAW_BUNDLE_DIR/scripts/serve_whiterabbit.py" >"$OPENCLAW_LOG_DIR/model.log" 2>&1 &
 MODEL_PID=$!
-for _ in $(seq 1 180); do
-  if curl --fail --silent "http://127.0.0.1:$OPENCLAW_MODEL_PORT/health" >/dev/null; then
-    break
-  fi
-  if ! kill -0 "$MODEL_PID" 2>/dev/null; then
-    tail -n 100 "$OPENCLAW_LOG_DIR/model.log" >&2
-    exit 1
-  fi
-  sleep 5
-done
-curl --fail --silent "http://127.0.0.1:$OPENCLAW_MODEL_PORT/health"
 
 openclaw gateway run --bind loopback --port "$OPENCLAW_GATEWAY_PORT" \
   >"$OPENCLAW_LOG_DIR/gateway.log" 2>&1 &
@@ -125,6 +89,29 @@ fi
 python "$OPENCLAW_BUNDLE_DIR/scripts/configure.py" --allow-origin "$tunnel_url"
 printf '\nOPENCLAW_URL=%s\nOPENCLAW_GATEWAY_TOKEN=%s\n\n' "$tunnel_url" "$OPENCLAW_GATEWAY_TOKEN"
 
+python - "$OPENCLAW_SECURITY_STATE_DIR/runtime-access.json" "$tunnel_url" "$OPENCLAW_GATEWAY_TOKEN" <<'PY'
+from datetime import datetime, timezone
+import json
+import os
+from pathlib import Path
+import sys
+
+target = Path(sys.argv[1])
+payload = {
+    "url": sys.argv[2],
+    "gatewayToken": sys.argv[3],
+    "gatewayPort": int(os.environ["OPENCLAW_GATEWAY_PORT"]),
+    "modelPort": int(os.environ["OPENCLAW_MODEL_PORT"]),
+    "hexstrikePort": int(os.environ["OPENCLAW_HEXSTRIKE_PORT"]),
+    "startedAt": datetime.now(timezone.utc).isoformat(),
+    "status": "gateway-ready-model-loading",
+}
+temporary = target.with_suffix(".tmp")
+temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+os.chmod(temporary, 0o600)
+os.replace(temporary, target)
+PY
+
 backup_now
 (
   while sleep 900; do
@@ -133,7 +120,84 @@ backup_now
 ) &
 BACKUP_LOOP_PID=$!
 
-idle_minutes="${OPENCLAW_IDLE_MINUTES:-30}"
+echo "Initializing native MCP security runtime after gateway startup..."
+"$OPENCLAW_BUNDLE_DIR/scripts/install_security_tools.sh"
+python "$OPENCLAW_BUNDLE_DIR/scripts/configure.py"
+
+hexstrike_work="$OPENCLAW_SECURITY_STATE_DIR/hexstrike/work"
+mkdir -p "$hexstrike_work"
+(
+  cd "$hexstrike_work"
+  exec env \
+    HOME="$OPENCLAW_SECURITY_HOME" \
+    HEXSTRIKE_HOST=127.0.0.1 \
+    HEXSTRIKE_PORT="$OPENCLAW_HEXSTRIKE_PORT" \
+    "$OPENCLAW_MCP_PYTHON" \
+    "$OPENCLAW_SECURITY_TOOLS_DIR/src/hexstrike/hexstrike_server.py" \
+    --port "$OPENCLAW_HEXSTRIKE_PORT"
+) >"$OPENCLAW_LOG_DIR/hexstrike.log" 2>&1 &
+HEXSTRIKE_PID=$!
+for _ in $(seq 1 90); do
+  if curl --fail --silent "http://127.0.0.1:$OPENCLAW_HEXSTRIKE_PORT/health" >/dev/null; then
+    break
+  fi
+  if ! kill -0 "$HEXSTRIKE_PID" 2>/dev/null; then
+    tail -n 100 "$OPENCLAW_LOG_DIR/hexstrike.log" >&2
+    exit 1
+  fi
+  sleep 2
+done
+curl --fail --silent "http://127.0.0.1:$OPENCLAW_HEXSTRIKE_PORT/health" >/dev/null
+
+# Reload the gateway once so the newly enabled MCP catalog is active even on
+# OpenClaw builds that do not hot-reload mcp.servers changes.
+kill "$GATEWAY_PID" 2>/dev/null || true
+wait "$GATEWAY_PID" 2>/dev/null || true
+openclaw gateway run --bind loopback --port "$OPENCLAW_GATEWAY_PORT" \
+  >>"$OPENCLAW_LOG_DIR/gateway.log" 2>&1 &
+GATEWAY_PID=$!
+for _ in $(seq 1 60); do
+  if curl --fail --silent "http://127.0.0.1:$OPENCLAW_GATEWAY_PORT/" >/dev/null; then
+    break
+  fi
+  if ! kill -0 "$GATEWAY_PID" 2>/dev/null; then
+    tail -n 100 "$OPENCLAW_LOG_DIR/gateway.log" >&2
+    exit 1
+  fi
+  sleep 2
+done
+curl --fail --silent "http://127.0.0.1:$OPENCLAW_GATEWAY_PORT/" >/dev/null
+"$OPENCLAW_BUNDLE_DIR/scripts/probe_mcp.sh"
+echo "OPENCLAW_MCP_READY=aircrack,hexstrike,strix,php2shell"
+
+for _ in $(seq 1 180); do
+  if curl --fail --silent "http://127.0.0.1:$OPENCLAW_MODEL_PORT/health" >/dev/null; then
+    break
+  fi
+  if ! kill -0 "$MODEL_PID" 2>/dev/null; then
+    tail -n 100 "$OPENCLAW_LOG_DIR/model.log" >&2
+    exit 1
+  fi
+  sleep 5
+done
+curl --fail --silent "http://127.0.0.1:$OPENCLAW_MODEL_PORT/health"
+python - "$OPENCLAW_SECURITY_STATE_DIR/runtime-access.json" <<'PY'
+import json
+import os
+from pathlib import Path
+import sys
+
+target = Path(sys.argv[1])
+payload = json.loads(target.read_text(encoding="utf-8"))
+payload["status"] = "ready"
+temporary = target.with_suffix(".tmp")
+temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+os.chmod(temporary, 0o600)
+os.replace(temporary, target)
+PY
+echo "OPENCLAW_READY=$tunnel_url"
+
+idle_minutes="${OPENCLAW_IDLE_MINUTES:-0}"
 max_runtime_hours="${OPENCLAW_MAX_RUNTIME_HOURS:-10}"
 (
   started_at="$(date +%s)"
@@ -159,7 +223,7 @@ PY
     then
       last_client_at="$now"
     fi
-    if (( now - last_client_at >= idle_minutes * 60 )); then
+    if (( idle_minutes > 0 && now - last_client_at >= idle_minutes * 60 )); then
       echo "No Control UI connection for ${idle_minutes} minutes; saving state and stopping GPU session."
       kill -TERM $$
       exit 0
