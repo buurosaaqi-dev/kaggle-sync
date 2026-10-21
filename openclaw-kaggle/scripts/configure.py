@@ -113,7 +113,8 @@ def configure_mcp(config: dict) -> None:
     aircrack_work = state / "aircrack"
     hexstrike_work = state / "hexstrike/work"
     strix_work = state / "strix/work"
-    for directory in (aircrack_work, hexstrike_work, strix_work):
+    php2shell_work = state / "php2shell/work"
+    for directory in (aircrack_work, hexstrike_work, strix_work, php2shell_work):
         directory.mkdir(parents=True, exist_ok=True)
     common_env = {
         "HOME": str(security_home),
@@ -169,6 +170,21 @@ def configure_mcp(config: dict) -> None:
                 },
                 "enabled": True,
                 "connectionTimeoutMs": 30_000,
+                "requestTimeoutMs": 900_000,
+                "supportsParallelToolCalls": False,
+                "codex": {"defaultToolsApprovalMode": "approve"},
+            },
+            "php2shell": {
+                "command": python,
+                "args": [str(bundle / "mcp/php2shell/server.py")],
+                "cwd": str(php2shell_work),
+                "env": {
+                    **common_env,
+                    "PHP2SHELL_REPO": str(tools / "src/php2shell-poc"),
+                    "PHP2SHELL_STATE_DIR": str(state / "php2shell"),
+                },
+                "enabled": True,
+                "connectionTimeoutMs": 20_000,
                 "requestTimeoutMs": 900_000,
                 "supportsParallelToolCalls": False,
                 "codex": {"defaultToolsApprovalMode": "approve"},

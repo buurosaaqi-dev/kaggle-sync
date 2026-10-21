@@ -11,6 +11,11 @@
       "version": "1.7.0",
       "repository": "https://github.com/usestrix/strix.git",
       "revision": "a3c31236bd6305784a501a3102dab0bda83f2317"
+    },
+    "php2shell": {
+      "version": "1.0.0",
+      "repository": "https://github.com/ikow/php2shell-poc.git",
+      "revision": "6d2168710509a2647545ba78d68afb1e3f745038"
     }
   },
   "runtime": {

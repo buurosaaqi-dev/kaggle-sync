@@ -24,7 +24,9 @@ The archive includes both `state/` and `home/`; model weights, Node binaries, pa
 
 ## Native MCP security runtime
 
-Startup verifies checksums for pinned portable binaries, checks out HexStrike and Strix by immutable Git revision, creates an exact Python 3.12.15 environment from `manifests/security-runtime-lock.txt`, and registers Aircrack, HexStrike, and Strix under native OpenClaw `mcp.servers`. `openclaw mcp doctor --probe` and `openclaw mcp probe` must both pass before the GPU model starts. Their reports are retained under `state/security/`.
+Startup verifies checksums for pinned portable binaries, checks out HexStrike, Strix, and PHP2Shell by immutable Git revision, creates an exact Python 3.12.15 environment from `manifests/security-runtime-lock.txt`, and registers Aircrack, HexStrike, Strix, and PHP2Shell under native OpenClaw `mcp.servers`. `openclaw mcp doctor --probe` and `openclaw mcp probe` must both pass before the GPU model starts. Their reports are retained under `state/security/`.
+
+PHP2Shell exposes passive advisory, version, header, repository, and lab checks against any target. Its five upstream verification chains run only when every resolved address is loopback; reports persist under `state/security/php2shell/runs/`. The privileged Docker lab from the upstream repository is not assumed inside Kaggle — `php2shell_lab_status` reports whether Docker, Compose, and the loopback listeners at 18080/18081 are actually present.
 
 The public repository contains adapters, manifests, checksums, and installers only. Captures, scan output, API credentials, OpenClaw credentials, and restored state remain in the encrypted archive.
 
@@ -38,6 +40,7 @@ The public repository contains adapters, manifests, checksums, and installers on
 - MCP SDK: `1.27.0`
 - HexStrike: `6.0.0` at `d689933ff579d839c676c82b231f8e98326c5f04`
 - Strix: `1.7.0` at `a3c31236bd6305784a501a3102dab0bda83f2317`
+- PHP2Shell: `1.0.0` at `6d2168710509a2647545ba78d68afb1e3f745038`
 - Aircrack-ng reference: `1:1.7+git20230807.4bf83f1a-3`
 
 The complete binary, Python, and Kali reference pins are in `manifests/security-tools.json`.

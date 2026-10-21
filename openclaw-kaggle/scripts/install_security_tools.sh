@@ -72,7 +72,7 @@ if [[ ! -f "$MARKER" ]]; then
     https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_amd64.tar.gz \
     5e22b5f0239e7eb79439d60d43d3cd20dca2478588bc2242e91ab0c4f8fa40dd amass
 
-  rm -rf "$SOURCE_ROOT/hexstrike" "$SOURCE_ROOT/strix"
+  rm -rf "$SOURCE_ROOT/hexstrike" "$SOURCE_ROOT/strix" "$SOURCE_ROOT/php2shell-poc"
   git init -q "$SOURCE_ROOT/hexstrike"
   git -C "$SOURCE_ROOT/hexstrike" remote add origin https://github.com/0x4m4/hexstrike-ai.git
   git -C "$SOURCE_ROOT/hexstrike" fetch -q --depth 1 origin d689933ff579d839c676c82b231f8e98326c5f04
@@ -111,6 +111,15 @@ PY
   git -C "$SOURCE_ROOT/strix" checkout -q --detach FETCH_HEAD
   [[ "$(git -C "$SOURCE_ROOT/strix" rev-parse HEAD)" == a3c31236bd6305784a501a3102dab0bda83f2317 ]]
   (cd "$SOURCE_ROOT/strix" && "$OPENCLAW_TOOLS_DIR/bin/uv" sync --frozen --no-dev --python 3.12.15)
+
+  git init -q "$SOURCE_ROOT/php2shell-poc"
+  git -C "$SOURCE_ROOT/php2shell-poc" remote add origin https://github.com/ikow/php2shell-poc.git
+  git -C "$SOURCE_ROOT/php2shell-poc" fetch -q --depth 1 origin 6d2168710509a2647545ba78d68afb1e3f745038
+  git -C "$SOURCE_ROOT/php2shell-poc" checkout -q --detach FETCH_HEAD
+  [[ "$(git -C "$SOURCE_ROOT/php2shell-poc" rev-parse HEAD)" == 6d2168710509a2647545ba78d68afb1e3f745038 ]]
+  for script in verify_session_injection.py verify_handler_mismatch.py verify_oom_trigger.py verify_fpm_stale_state.py verify_uaf_asan.php; do
+    [[ -f "$SOURCE_ROOT/php2shell-poc/poc/$script" ]]
+  done
 
   rm -f "$SECURITY_ROOT"/.installed-*
   touch "$MARKER"
