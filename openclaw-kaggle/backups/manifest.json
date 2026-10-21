@@ -1,0 +1,11 @@
+{
+  "format": "openclaw-kaggle-backup-v1",
+  "cipher": "AES-256-GCM",
+  "kdf": "PBKDF2-HMAC-SHA256",
+  "kdfIterations": 600000,
+  "archive": "openclaw-state.enc",
+  "bytes": 10270433,
+  "sha256": "c415957b22893ef6b391554796b6f5c30b40580cdc41d31d42ed33d1220d5fee",
+  "openclawVersion": "2026.10.5",
+  "updatedAt": "2026-10-21T20:02:26.155691+00:00"
+}
