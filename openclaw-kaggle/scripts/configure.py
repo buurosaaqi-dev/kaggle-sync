@@ -41,7 +41,6 @@ def atomic_json(path: Path, value: dict) -> None:
 
 
 def fresh_config() -> dict:
-    state_dir = Path(os.environ["OPENCLAW_STATE_DIR"])
     workspace = Path(os.environ["OPENCLAW_WORKSPACE_DIR"])
     model_port = int(os.environ.get("OPENCLAW_MODEL_PORT", "8000"))
     model_alias = os.environ.get("OPENCLAW_MODEL_ALIAS", "WhiteRabbitNeo-13B")
@@ -54,7 +53,7 @@ def fresh_config() -> dict:
                 "whiterabbit": {
                     "baseUrl": f"http://127.0.0.1:{model_port}/v1",
                     "api": "openai-completions",
-                    "auth": "none",
+                    "apiKey": "local-kaggle-endpoint",
                     "timeoutSeconds": 900,
                     "models": [
                         {
@@ -63,8 +62,8 @@ def fresh_config() -> dict:
                             "reasoning": False,
                             "input": ["text"],
                             "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
-                            "contextWindow": 4096,
-                            "contextTokens": 3072,
+                            "contextWindow": 16384,
+                            "contextTokens": 12288,
                             "maxTokens": 1024,
                             "compat": {
                                 "supportsTools": True,
@@ -81,7 +80,6 @@ def fresh_config() -> dict:
         "agents": {
             "defaults": {
                 "model": {"primary": model_ref},
-                "models": {model_ref: {"alias": "WhiteRabbit"}},
                 "workspace": str(workspace),
                 "timeoutSeconds": 1200,
                 "maxConcurrent": 1,
@@ -99,8 +97,8 @@ def fresh_config() -> dict:
                 ]
             },
         },
+        "memory": {"search": {"enabled": False}},
         "commands": {"restart": True},
-        "meta": {"deployment": "kaggle", "stateDir": str(state_dir)},
     }
 
 

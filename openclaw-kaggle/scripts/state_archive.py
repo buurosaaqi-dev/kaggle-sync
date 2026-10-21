@@ -49,6 +49,8 @@ def sqlite_snapshot(source: Path, destination: Path) -> None:
             with contextlib.closing(sqlite3.connect(temp)) as dst:
                 src.backup(dst, pages=1024, sleep=0.01)
             os.replace(temp, destination)
+            for suffix in ("-wal", "-shm", "-journal"):
+                destination.with_name(destination.name + suffix).unlink(missing_ok=True)
     except sqlite3.Error:
         return
 
@@ -153,7 +155,12 @@ def safe_members(archive: tarfile.TarFile) -> list[tarfile.TarInfo]:
                 raise ValueError(f"unsafe symbolic link: {member.name}")
         if member.islnk():
             target = PurePosixPath(member.linkname)
-            if target.is_absolute() or ".." in target.parts or target.parts[0] not in ROOT_NAMES:
+            if (
+                target.is_absolute()
+                or not target.parts
+                or ".." in target.parts
+                or target.parts[0] not in ROOT_NAMES
+            ):
                 raise ValueError(f"unsafe hard link: {member.name}")
         accepted.append(member)
     return accepted
@@ -176,7 +183,11 @@ def backup(runtime_root: Path, output: Path, passphrase: str) -> None:
         tar_path = Path(temp_dir) / "openclaw-state.tar.gz"
         build_tar(runtime_root, tar_path)
         encrypt_file(tar_path, output, passphrase)
-    digest = hashlib.sha256(output.read_bytes()).hexdigest()
+    digest_builder = hashlib.sha256()
+    with output.open("rb") as stream:
+        while chunk := stream.read(CHUNK_SIZE):
+            digest_builder.update(chunk)
+    digest = digest_builder.hexdigest()
     print(f"backup={output} bytes={output.stat().st_size} sha256={digest}")
 
 

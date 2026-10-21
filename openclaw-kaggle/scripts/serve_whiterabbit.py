@@ -22,7 +22,7 @@ import uvicorn
 MODEL_ID = os.environ.get("OPENCLAW_MODEL_ID", "WhiteRabbitNeo/WhiteRabbitNeo-13B-v1")
 MODEL_ALIAS = os.environ.get("OPENCLAW_MODEL_ALIAS", "WhiteRabbitNeo-13B")
 PORT = int(os.environ.get("OPENCLAW_MODEL_PORT", "8000"))
-MAX_INPUT_TOKENS = int(os.environ.get("OPENCLAW_MODEL_MAX_INPUT", "3072"))
+MAX_INPUT_TOKENS = int(os.environ.get("OPENCLAW_MODEL_MAX_INPUT", "12288"))
 MAX_OUTPUT_TOKENS = int(os.environ.get("OPENCLAW_MODEL_MAX_OUTPUT", "1024"))
 TOOL_PATTERN = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
 
@@ -30,14 +30,15 @@ app = FastAPI(title="WhiteRabbitNeo OpenAI-Compatible API")
 generation_lock = asyncio.Lock()
 
 
-def gpu_memory_map() -> dict[int, str] | None:
+def gpu_memory_map() -> dict[int | str, str] | None:
     count = torch.cuda.device_count()
     if count == 0:
         return None
-    result: dict[int, str] = {}
+    result: dict[int | str, str] = {}
     for index in range(count):
         total_gib = torch.cuda.get_device_properties(index).total_memory / 1024**3
         result[index] = f"{max(4, int(total_gib * 0.82))}GiB"
+    result["cpu"] = "24GiB"
     return result
 
 
@@ -217,6 +218,7 @@ async def chat_completions(request: Request):
                 "top_p": top_p,
                 "pad_token_id": tokenizer.pad_token_id,
                 "eos_token_id": tokenizer.eos_token_id,
+                "use_cache": True,
             }
             if temperature > 0:
                 generate_args["temperature"] = temperature
