@@ -7,6 +7,7 @@ MODEL_PID=""
 GATEWAY_PID=""
 TUNNEL_PID=""
 BACKUP_LOOP_PID=""
+IDLE_WATCH_PID=""
 
 backup_now() {
   if [[ -n "${OPENCLAW_BACKUP_KEY:-}" ]]; then
@@ -17,6 +18,7 @@ backup_now() {
 cleanup() {
   trap - EXIT INT TERM
   [[ -n "$BACKUP_LOOP_PID" ]] && kill "$BACKUP_LOOP_PID" 2>/dev/null || true
+  [[ -n "$IDLE_WATCH_PID" ]] && kill "$IDLE_WATCH_PID" 2>/dev/null || true
   backup_now
   [[ -n "$TUNNEL_PID" ]] && kill "$TUNNEL_PID" 2>/dev/null || true
   [[ -n "$GATEWAY_PID" ]] && kill "$GATEWAY_PID" 2>/dev/null || true
@@ -101,5 +103,45 @@ backup_now
   done
 ) &
 BACKUP_LOOP_PID=$!
+
+idle_minutes="${OPENCLAW_IDLE_MINUTES:-30}"
+max_runtime_hours="${OPENCLAW_MAX_RUNTIME_HOURS:-10}"
+(
+  started_at="$(date +%s)"
+  last_client_at="$started_at"
+  while sleep 60; do
+    now="$(date +%s)"
+    if python - "$OPENCLAW_GATEWAY_PORT" <<'PY'
+from pathlib import Path
+import sys
+
+port = int(sys.argv[1])
+for table in (Path("/proc/net/tcp"), Path("/proc/net/tcp6")):
+    if not table.exists():
+        continue
+    for line in table.read_text().splitlines()[1:]:
+        fields = line.split()
+        local_port = int(fields[1].rsplit(":", 1)[1], 16)
+        state = fields[3]
+        if local_port == port and state == "01":
+            raise SystemExit(0)
+raise SystemExit(1)
+PY
+    then
+      last_client_at="$now"
+    fi
+    if (( now - last_client_at >= idle_minutes * 60 )); then
+      echo "No Control UI connection for ${idle_minutes} minutes; saving state and stopping GPU session."
+      kill -TERM $$
+      exit 0
+    fi
+    if (( now - started_at >= max_runtime_hours * 3600 )); then
+      echo "Maximum runtime of ${max_runtime_hours} hours reached; saving state and stopping GPU session."
+      kill -TERM $$
+      exit 0
+    fi
+  done
+) &
+IDLE_WATCH_PID=$!
 
 wait "$GATEWAY_PID"

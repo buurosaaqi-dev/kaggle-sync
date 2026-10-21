@@ -18,6 +18,8 @@ The notebook prints `OPENCLAW_URL` and `OPENCLAW_GATEWAY_TOKEN` after the model,
 
 At startup, `backups/openclaw-state.enc` is authenticated, decrypted, and restored into `/kaggle/working/openclaw-runtime`. While running, an online SQLite-safe snapshot is encrypted with AES-256-GCM using a 600,000-round PBKDF2-HMAC-SHA256 key and pushed every 15 minutes. A final backup is attempted when the kernel receives a normal stop signal.
 
+To preserve GPU quota, the kernel saves state and exits after 30 minutes without an established Control UI connection. A 10-hour hard limit leaves time for the final backup before Kaggle's session ceiling. Override these with `OPENCLAW_IDLE_MINUTES` and `OPENCLAW_MAX_RUNTIME_HOURS` when launching the notebook.
+
 The archive includes both `state/` and `home/`; model weights, Node binaries, package caches, and operational logs remain outside it and are recreated after a Kaggle reset.
 
 ## Versions
