@@ -1,5 +1,5 @@
 {
-  "id": "updyrahmaanomer/openclaw-kaggle",
+  "id": "updyrahmaanomer/openclaw-kaggle-persistent",
   "title": "OpenClaw Kaggle Persistent",
   "code_file": "openclaw-kaggle.ipynb",
   "language": "python",
@@ -8,12 +8,7 @@
   "enable_gpu": true,
   "enable_tpu": false,
   "enable_internet": true,
-  "keywords": [
-    "openclaw",
-    "whiterabbitneo",
-    "persistent",
-    "gpu"
-  ],
+  "keywords": ["gpu"],
   "dataset_sources": [],
   "kernel_sources": [],
   "competition_sources": [],
