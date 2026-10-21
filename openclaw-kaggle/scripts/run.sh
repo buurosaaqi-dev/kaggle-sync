@@ -29,9 +29,20 @@ trap cleanup EXIT INT TERM
 "$OPENCLAW_BUNDLE_DIR/scripts/restore.sh"
 python "$OPENCLAW_BUNDLE_DIR/scripts/configure.py"
 
-set -a
-source "$OPENCLAW_STATE_DIR/.env"
-set +a
+OPENCLAW_GATEWAY_TOKEN="$(python - "$OPENCLAW_STATE_DIR/.env" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+for raw in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines():
+    if raw.startswith("OPENCLAW_GATEWAY_TOKEN="):
+        print(json.loads(raw.split("=", 1)[1]))
+        break
+else:
+    raise SystemExit("OPENCLAW_GATEWAY_TOKEN is missing from the state .env")
+PY
+)"
+export OPENCLAW_GATEWAY_TOKEN
 
 python "$OPENCLAW_BUNDLE_DIR/scripts/serve_whiterabbit.py" >"$OPENCLAW_LOG_DIR/model.log" 2>&1 &
 MODEL_PID=$!
