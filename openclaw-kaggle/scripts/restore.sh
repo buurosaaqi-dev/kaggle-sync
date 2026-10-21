@@ -8,8 +8,9 @@ if [[ ! -s "$OPENCLAW_BACKUP_FILE" ]]; then
   exit 0
 fi
 if [[ -z "${OPENCLAW_BACKUP_KEY:-}" ]]; then
-  echo "OPENCLAW_BACKUP_KEY is required to restore the encrypted state" >&2
-  exit 2
+  echo "OPENCLAW_BACKUP_KEY is not set; existing encrypted state cannot be restored." >&2
+  echo "Starting with fresh state. The archive at $OPENCLAW_BACKUP_FILE is left untouched." >&2
+  exit 0
 fi
 
 if [[ -s "$OPENCLAW_BACKUP_MANIFEST" ]]; then
