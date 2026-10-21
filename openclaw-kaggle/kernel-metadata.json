@@ -1,0 +1,22 @@
+{
+  "id": "updyrahmaanomer/openclaw-kaggle",
+  "title": "OpenClaw Kaggle Persistent",
+  "code_file": "openclaw-kaggle.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "keywords": [
+    "openclaw",
+    "whiterabbitneo",
+    "persistent",
+    "gpu"
+  ],
+  "dataset_sources": [],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": [],
+  "machine_shape": "NvidiaTeslaT4"
+}
